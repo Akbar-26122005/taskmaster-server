@@ -2,18 +2,24 @@ const http = require('http');
 const cors = require('cors');
 const express = require('express');
 const config = require('../config/config');
-const supabase = require('../db/supabaseClient');
 
 const Auth = require('./routes/auth');
+const Data = require('./routes/data');
 
 const app = express();
 const server = http.createServer(app);
 
-app.use(express.json());
 app.use(cors({
     origin: 'http://localhost:3000',
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type']
 }));
+app.use(express.json());
+
+// Routes
+app.use('/auth', Auth);
+app.use('/data', Data);
 
 app.get('/', async (req, res) => {
     res.send(`
@@ -42,8 +48,6 @@ app.get('/', async (req, res) => {
         </html>
     `);
 });
-
-app.use('/auth', Auth);
 
 function startServer(port = null) {
     port = port || config.port;
