@@ -1,10 +1,11 @@
 const http = require('http');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const express = require('express');
 const config = require('../config/config');
 
 const Auth = require('./routes/auth');
-const Data = require('./routes/data');
+const Lists = require('./routes/lists');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,10 +17,11 @@ app.use(cors({
     allowedHeaders: ['Content-Type']
 }));
 app.use(express.json());
+app.use(cookieParser());
 
 // Routes
 app.use('/auth', Auth);
-app.use('/data', Data);
+app.use('/lists', Lists);
 
 app.get('/', async (req, res) => {
     res.send(`
