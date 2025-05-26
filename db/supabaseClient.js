@@ -7,9 +7,9 @@ const supabase = createClient(
     config.supabase.key
 );
 
-supabase.auth.signInWithPassword({
-    email: config.supabase.email,
-    password: config.supabase.password
-});
+// supabase.auth.signInWithPassword({
+//     email: config.supabase.email,
+//     password: config.supabase.password
+// });
 
 module.exports = supabase;

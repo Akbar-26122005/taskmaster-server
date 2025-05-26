@@ -2,6 +2,7 @@ const router = require('express').Router();
 const jwt = require('jsonwebtoken');
 const supabase = require('../../db/supabaseClient');
 const bcrypt = require('bcrypt');
+const validateAuthToken = require('./middlewares/validateAuhToken');
 require('dotenv').config()
 ;
 
@@ -98,7 +99,7 @@ router.post('/signup', async (req, res) => {
 
         res.cookie('token', token, {
             httpOnly: true,
-            secure: true,                   // only https
+            secure: false,                   // only https
             sameSite: 'strict',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
@@ -118,7 +119,7 @@ router.post('/signup', async (req, res) => {
     }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', validateAuthToken, async (req, res) => {
     try {
         const { email, password } = req.body;
 
@@ -157,7 +158,7 @@ router.post('/login', async (req, res) => {
 
         res.cookie('token', token, {
             httpOnly: true,
-            secure: true,                   // only https
+            secure: false,                   // only https
             sameSite: 'strict',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });

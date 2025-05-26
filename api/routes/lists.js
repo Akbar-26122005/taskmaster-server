@@ -62,8 +62,7 @@ router.post('/delete', async (req, res) => {
             console.error('Supabase error:', error);
             return res.status(500).json({ error: 'Database error' });
         }
-
-        console.log('Успешное удаление данных.');
+        
         return res.status(200).json({ data });
     } catch (err) {
         console.error('Server error:', err);
