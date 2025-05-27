@@ -91,9 +91,15 @@ router.post('/signup', async (req, res) => {
         }
 
         const token = jwt.sign(
-            { userId: newUser[0].id, email: newUser[0].email },
+            {
+                userId: newUser[0].id
+                ,email: newUser[0].email
+                ,first_name: newUser.first_name
+                ,last_name: newUser.last_name
+                ,middle_name: newUser.middle_name
+            },
             process.env.JWT_SECRET,
-            { expiresIn: '7d' }
+            { expiresIn: '24h' }
         );
 
         res.cookie('token', token, {
@@ -151,9 +157,15 @@ router.post('/login', validateAuthToken, async (req, res) => {
         }
 
         const token = jwt.sign(
-            { userId: newUser[0].id, email: newUser[0].email },
+            {
+                userId: user[0].id
+                ,email: user[0].email
+                ,first_name: user.first_name
+                ,last_name: user.last_name
+                ,middle_name: user.middle_name
+            },
             process.env.JWT_SECRET,
-            { expiresIn: '7d' }
+            { expiresIn: '24h' }
         );
 
         res.cookie('token', token, {
