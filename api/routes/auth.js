@@ -3,8 +3,7 @@ const jwt = require('jsonwebtoken');
 const supabase = require('../../db/supabaseClient');
 const bcrypt = require('bcrypt');
 const validateAuthToken = require('./middlewares/validateAuhToken');
-require('dotenv').config()
-;
+require('dotenv').config();
 
 async function hashPassword(password) {
     const salt = await bcrypt.genSalt(10);
@@ -25,7 +24,7 @@ router.get('/check', (req, res) => {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        res.json({
+        return req.status(201).json({
             isAuthenticated: true,
             user: {
                 id: decoded.userId,
@@ -99,9 +98,9 @@ router.post('/signup', async (req, res) => {
 
         res.cookie('token', token, {
             httpOnly: true,
-            secure: false,                   // only https
+            secure: false,              // only https
             sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            maxAge: 24 * 60 * 60 * 1000 // 24h
         });
 
         return res.status(200).json({
@@ -116,6 +115,7 @@ router.post('/signup', async (req, res) => {
         });
 
     } catch (err) {
+        console.log('Error:', err);
     }
 });
 
@@ -158,9 +158,9 @@ router.post('/login', validateAuthToken, async (req, res) => {
 
         res.cookie('token', token, {
             httpOnly: true,
-            secure: false,                   // only https
+            secure: false,              // only https
             sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            maxAge: 24 * 60 * 60 * 1000 // 24h
         });
 
         return res.status(200).json({
