@@ -27,8 +27,11 @@ router.get('/check', (req, res) => {
         return req.status(201).json({
             isAuthenticated: true,
             user: {
-                id: decoded.userId,
-                email: decoded.email
+                id: decoded.userId
+                ,email: decoded.email
+                ,first_name: decoded.first_name
+                ,last_name: decoded.last_name
+                ,middle_name: decoded.middle_name
             }
         });
     } catch (err) {
