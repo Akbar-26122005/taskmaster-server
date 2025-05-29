@@ -19,7 +19,8 @@ router.get('/check', async (req, res) => {
         const token = req.cookies.token;
 
         if (!token) {
-            return res.status(401).json({ isAuthenticated: false, message: 'The token does not exist' });
+            console.log('token is not defined');
+            return res.status(201).json({ isAuthenticated: false, message: 'The token does not exist' });
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -28,14 +29,19 @@ router.get('/check', async (req, res) => {
             .from('users')
             .select('*')
             .eq('id', decoded.userId)
-            .limit(1)
+            .limit(1);
+        
+        if (error) {
+            console.error('Supabase error', error.message);
+            throw new Error(`Database error: ${error.message}`);
+        }
         
         const user = data[0];
 
         return res.status(201).json({
             isAuthenticated: true,
             user: {
-                id: user.userId
+                id: user.id
                 ,email: user.email
                 ,first_name: user.first_name
                 ,last_name: user.last_name
@@ -47,6 +53,48 @@ router.get('/check', async (req, res) => {
     }
 });
 
+router.get('/logout', (req, res) => {
+    try {
+        // const token = req.cookies.token;
+    
+        // if (!token) {
+        //     console.error('No token found during logout attemp');
+        //     return res.status(200).json({
+        //         success: true,
+        //         message: 'No active session found'
+        //     });
+        // }
+
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            path: '/'
+        };
+
+        res.cookie('token', '', { ...cookieOptions, maxAge: -1 });  // Старый способ
+        res.clearCookie('token', cookieOptions);                    // Новый способ
+    
+        // res.clearCookie('token', {
+        //     httpOnly: true,
+        //     secure: process.env.NODE_ENV === 'production',
+        //     sameSite: 'strict',
+        //     path: '/'
+        // });
+    
+        return res.status(200).json({
+            success: true,
+            message: 'Successfully logged out'
+        });
+    } catch (err) {
+        console.error('Logout error:', err);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error during logout'
+        });
+    }
+});
+
 router.post('/signup', async (req, res) => {
     try {
         const { email, password, first_name, last_name, middle_name } = req.body;
@@ -54,7 +102,7 @@ router.post('/signup', async (req, res) => {
         if (!email || !password || !first_name || !last_name) {
             return res.status(400).json({
                 success: false,
-                message: 'Email, password, forst name and last name are required'
+                message: 'Email, password, first name and last name are required'
             });
         }
 
@@ -77,13 +125,13 @@ router.post('/signup', async (req, res) => {
         
         if (lookupError) {
             console.error('Supabase lookup error:', lookupError);
-            return res.status(500).json({ success: false, message: 'Dtaabase error' });
+            return res.status(500).json({ success: false, message: 'Database error' });
         }
 
         if (existingUsers.length > 0)
             return res.status(409).json({ success: false, message: 'Email already exists' });
 
-        const hashedPassword = hashPassword(password);
+        const hashedPassword = await hashPassword(password);
 
         const { data: newUser, error: createError } = await supabase
             .from('users')
@@ -94,7 +142,7 @@ router.post('/signup', async (req, res) => {
                 last_name,
                 middle_name: middle_name || null,
             }])
-            .select('id, email, first_name, last_name')
+            .select('id, email, first_name, last_name, middle_name')
         
         if (createError) {
             console.error('Supabase error:', createError);
@@ -102,16 +150,17 @@ router.post('/signup', async (req, res) => {
         }
 
         // Генерация jwt-токена
-        const token = jwt.sign({ userId: user[0].id },process.env.JWT_SECRET, { expiresIn: '24h' });
+        const token = jwt.sign({ userId: newUser[0].id },process.env.JWT_SECRET, { expiresIn: '24h' });
 
         res.cookie('token', token, {
             httpOnly: true,
-            secure: false,              // only https
+            secure: process.env.NODE_ENV === 'production',  // only https
             sameSite: 'strict',
-            maxAge: 24 * 60 * 60 * 1000 // 24h
+            maxAge: 24 * 60 * 60 * 1000,                    // 24h
+            path: '/'
         });
 
-        return res.status(200).json({
+        return res.status(201).json({
             message: 'User created successfully',
             success: true,
             user: {
@@ -119,13 +168,13 @@ router.post('/signup', async (req, res) => {
                 ,email: newUser[0].email
                 ,first_name: newUser[0].first_name
                 ,last_name: newUser[0].last_name
-                ,middle_name: newUser[0].middle_nam
+                ,middle_name: newUser[0].middle_name
             }
         });
 
     } catch (err) {
         console.log('Error:', err);
-        return res.status(401).json({ success: false });
+        return res.status(500).json({ success: false, message: err.message });
     }
 });
 
@@ -134,7 +183,7 @@ router.post('/login', async (req, res) => {
         const { email, password } = req.body;
 
         if (!email || !password) {
-            return res.status(400).json({ success: false, message: 'Enail and passwordare required' });
+            return res.status(400).json({ success: false, message: 'Email and password required' });
         }
 
         const { data: users, error } = await supabase
@@ -144,7 +193,7 @@ router.post('/login', async (req, res) => {
             .limit(1);
 
         if (error) {
-            console.error('Supabase error:', err);
+            console.error('Supabase error:', error);
             return res.status(500).json({ success: false, message: 'Database error' });
         }
 
@@ -154,20 +203,21 @@ router.post('/login', async (req, res) => {
 
         const user = users[0];
 
-        const isPasswordValid = verifyPassword(password, user.password);
+        const isPasswordValid = await verifyPassword(password, user.password);
 
         if (!isPasswordValid) {
             return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
 
         // Генерация jwt-токена
-        const token = jwt.sign({ userId: user[0].id },process.env.JWT_SECRET, { expiresIn: '24h' });
+        const token = jwt.sign({ userId: user.id },process.env.JWT_SECRET, { expiresIn: '24h' });
 
         res.cookie('token', token, {
             httpOnly: true,
-            secure: false,              // only https
+            secure: process.env.NODE_ENV === 'production',      // only https
             sameSite: 'strict',
-            maxAge: 24 * 60 * 60 * 1000 // 24h
+            maxAge: 24 * 60 * 60 * 1000,                        // 24h
+            path: '/'
         });
 
         return res.status(200).json({
@@ -178,7 +228,7 @@ router.post('/login', async (req, res) => {
                 ,email: user.email
                 ,first_name: user.first_name
                 ,last_name: user.last_name
-                ,middle_name: user.middle_nam
+                ,middle_name: user.middle_name
             }
         });
     } catch (err) {
