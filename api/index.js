@@ -6,6 +6,7 @@ const config = require('../config/config');
 
 const Auth = require('./routes/auth');
 const Lists = require('./routes/lists');
+const Tasks = require('./routes/tasks');
 
 const app = express();
 const server = http.createServer(app);
@@ -22,6 +23,7 @@ app.use(cookieParser());
 // Routes
 app.use('/auth', Auth);
 app.use('/lists', Lists);
+app.use('/tasks', Tasks);
 
 app.get('/', async (req, res) => {
     res.send(`

@@ -16,14 +16,13 @@ async function verifyPassword(password, storedHash) {
 
 router.get('/check', async (req, res) => {
     try {
-        const token = req.cookies.token;
+        const session = req.cookies.session;
 
-        if (!token) {
-            console.log('token is not defined');
-            return res.status(201).json({ isAuthenticated: false, message: 'The token does not exist' });
+        if (!session) {
+            return res.status(201).json({ isAuthenticated: false, message: 'The session does not exist' });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(session, process.env.JWT_SECRET);
 
         const { data, error } = await supabase
             .from('users')
@@ -55,15 +54,15 @@ router.get('/check', async (req, res) => {
 
 router.get('/logout', (req, res) => {
     try {
-        // const token = req.cookies.token;
+        const session = req.cookies.session;
     
-        // if (!token) {
-        //     console.error('No token found during logout attemp');
-        //     return res.status(200).json({
-        //         success: true,
-        //         message: 'No active session found'
-        //     });
-        // }
+        if (!session) {
+            console.error('No session found during logout attemp');
+            return res.status(200).json({
+                success: true,
+                message: 'No active session found'
+            });
+        }
 
         const cookieOptions = {
             httpOnly: true,
@@ -72,10 +71,11 @@ router.get('/logout', (req, res) => {
             path: '/'
         };
 
-        res.cookie('token', '', { ...cookieOptions, maxAge: -1 });  // Старый способ
-        res.clearCookie('token', cookieOptions);                    // Новый способ
+        res.cookie('session', '', { ...cookieOptions, maxAge: -1 });  // Старый способ
+        res.clearCookie('session', cookieOptions);                    // Новый способ
+        console.log('Попытка удалить session из cookie');
     
-        // res.clearCookie('token', {
+        // res.clearCookie('session', {
         //     httpOnly: true,
         //     secure: process.env.NODE_ENV === 'production',
         //     sameSite: 'strict',
@@ -117,7 +117,7 @@ router.post('/signup', async (req, res) => {
             });
         }
 
-        const { data: existingUsers, error: lookupError} = await supabase
+        const { data: existingUsers, error: lookupError } = await supabase
             .from('users')
             .select('email')
             .eq('email', email)
@@ -150,12 +150,12 @@ router.post('/signup', async (req, res) => {
         }
 
         // Генерация jwt-токена
-        const token = jwt.sign({ userId: newUser[0].id },process.env.JWT_SECRET, { expiresIn: '24h' });
+        const session = jwt.sign({ userId: newUser[0].id },process.env.JWT_SECRET, { expiresIn: '24h' });
 
-        res.cookie('token', token, {
+        res.cookie('session', session, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',  // only https
-            sameSite: 'strict',
+            sameSite: 'lax',
             maxAge: 24 * 60 * 60 * 1000,                    // 24h
             path: '/'
         });
@@ -210,14 +210,14 @@ router.post('/login', async (req, res) => {
         }
 
         // Генерация jwt-токена
-        const token = jwt.sign({ userId: user.id },process.env.JWT_SECRET, { expiresIn: '24h' });
+        const session = jwt.sign({ userId: user.id },process.env.JWT_SECRET, { expiresIn: '24h' });
 
-        res.cookie('token', token, {
+        res.cookie('session', session, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',      // only https
-            sameSite: 'strict',
+            sameSite: 'lax',
             maxAge: 24 * 60 * 60 * 1000,                        // 24h
-            path: '/'
+            path: '/',
         });
 
         return res.status(200).json({

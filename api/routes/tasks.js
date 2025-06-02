@@ -2,7 +2,7 @@ const router = require('express').Router();
 const supabase = require('../../db/supabaseClient');
 
 // Содание новой записи задачи
-router.port('/create', async (req, res) => {
+router.post('/create', async (req, res) => {
     try {
         const { title, list_id, is_done } = req.body;
 
@@ -23,6 +23,30 @@ router.port('/create', async (req, res) => {
     } catch (err) {
         console.error('Server error:', err);
         return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.post('/update', async (req, res) => {
+    try {
+        const { id, title, is_done } = req.body;
+
+        const { data, error } = await supabase
+            .from('tasks')
+            .update({ title, is_done })
+            .eq('id', id)
+            .select();
+        
+        if (error) throw error;
+
+        return res.status(200).json({
+            success: true,
+            task: data[0]
+        });
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
     }
 });
 
@@ -50,22 +74,28 @@ router.get('/get', async (req, res) => {
 
 router.post('/delete', async (req, res) => {
     try {
-        const { task_ids } = req.body;
+        const { id } = req.body;
 
         const { data, error } = await supabase
             .from('tasks')
             .delete()
-            .in('list_id', task_ids);
+            .eq('id', id);
         
         if (error) {
             console.error('Supabase error:', err);
-            return res.status(500).json({ error: 'Database error' });
+            return res.status(500).json({
+                success: true,
+                error: 'Database error'
+            });
         }
 
         return res.status(200).json({ data });
     } catch (err) {
         console.error('Server error:', err);
-        return res.status(500).json({ error: 'Internal server error' })
+        return res.status(500).json({
+            success: true,
+            error: 'Internal server error'
+        });
     }
 });
 

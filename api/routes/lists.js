@@ -22,7 +22,35 @@ router.post('/create', async (req, res) => {
         });
     } catch (err) {
         console.error('Server error:', err);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+// Обновление записи списка задач
+router.post('/update', async (req, res) => {
+    try {
+        const { id, name, description } = req.body;
+
+        const { data, error } = await supabase
+            .from('lists')
+            .update({ name, description })
+            .eq('id', id)
+            .select();
+        
+        if (error) throw error;
+
+        return res.status(200).json({
+            success: true,
+            list: data[0]
+        })
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
     }
 });
 
